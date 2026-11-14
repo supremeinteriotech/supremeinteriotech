@@ -1,6 +1,6 @@
 // Studio settings: replace these values once when connecting the live sheet and enquiry backend.
 const CONFIG = Object.freeze({
-  SHEET_CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh5AuE68K5ESEVX0LWjQ1RQeaXkxIP3L-9_nU9gps2VH_OKIax3jfYmxp3xYZ3Jro_daWiWV8wRpnj/pub?output=csv",
+  SHEET_CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCDtjINQsahj83XUq3YUXsYcaToczUtNpFf0Z9HA5XzJgF2bK5l6eeOSpjhfRvZzum9fiP-O_qf0ph/pub?output=csv",
   APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_WEB_APP_URL_HERE",
   COMPANY_NAME: "Supreme Interiotech & Constructions",
   PHONE: "",
