@@ -1,4 +1,4 @@
-// Studio settings: replace these values once when connecting the live sheet and enquiry backend.
+// The project records are loaded from this CSV; only its source URL is configured here.
 const CONFIG = Object.freeze({
   SHEET_CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCDtjINQsahj83XUq3YUXsYcaToczUtNpFf0Z9HA5XzJgF2bK5l6eeOSpjhfRvZzum9fiP-O_qf0ph/pub?output=csv",
   APPS_SCRIPT_URL: "PASTE_APPS_SCRIPT_WEB_APP_URL_HERE",
@@ -19,67 +19,9 @@ const TIER_INFO = {
   Essential: "Beautiful, practical foundations with the details that matter most."
 };
 
-const LEGACY_DEMO_TIERS = Object.freeze({
-  "ksr area project": "Premium",
-  "msr area project": "Signature",
-  "bsr area project": "Essential"
-});
-
-const DEMO_PROJECTS = [
-  {
-    title: "KSR Area Project",
-    tier: "Premium",
-    location: "KSR area",
-    year: "2026-11-12",
-    area: "",
-    description: "Interior project in the KSR area.",
-    youtubeUrls: ["https://youtu.be/SNc9uJD_y9s"],
-    coverImageUrl: "",
-    photoUrls: [],
-    instagramUrls: ["https://www.instagram.com/p/DL7_mlJzEsP/"],
-    featured: true,
-    status: "Show"
-  },
-  {
-    title: "MSR Area Project",
-    tier: "Signature",
-    location: "MSR area",
-    year: "2026-11-13",
-    area: "",
-    description: "Interior project in the MSR area.",
-    youtubeUrls: ["https://youtu.be/SNc9uJD_y9s"],
-    coverImageUrl: "",
-    photoUrls: [],
-    instagramUrls: ["https://www.instagram.com/p/DL7_mlJzEsP/"],
-    featured: true,
-    status: "Show"
-  },
-  {
-    title: "BSR Area Project",
-    tier: "Essential",
-    location: "BSR area",
-    year: "2026-11-10",
-    area: "",
-    description: "Interior project in the BSR area.",
-    youtubeUrls: ["https://youtu.be/SNc9uJD_y9s"],
-    coverImageUrl: "",
-    photoUrls: [],
-    instagramUrls: ["https://www.instagram.com/p/DL7_mlJzEsP/"],
-    featured: true,
-    status: "Show"
-  }
-];
-
-function demoProjects() {
-  return DEMO_PROJECTS.map(project => ({
-    ...project,
-    cover: project.coverImageUrl,
-    photos: project.photoUrls,
-    instagramPosts: project.instagramUrls.map(url => instagramMedia(url)).filter(Boolean),
-    videoIds: project.youtubeUrls.map(youtubeVideoId).filter(Boolean),
-    videoFiles: []
-  }));
-}
+const PROFILE_STORAGE_KEY = "supreme-interiotech-profile-v1";
+const PROFILE_CHOICE_KEY = "supreme-interiotech-profile-choice-v1";
+const PROFILE_VISITOR_ID_KEY = "supreme-interiotech-profile-id-v1";
 
 const elements = {
   projectGrid: document.querySelector("#project-grid"),
@@ -106,6 +48,17 @@ const elements = {
   lightboxImage: document.querySelector("#lightbox-image"),
   lightboxCount: document.querySelector("#lightbox-count"),
   contactForm: document.querySelector("#contact-form"),
+  profileDialog: document.querySelector("#profile-dialog"),
+  profileForm: document.querySelector("#profile-form"),
+  profileName: document.querySelector("#profile-name"),
+  profileEmail: document.querySelector("#profile-email"),
+  profilePhone: document.querySelector("#profile-phone"),
+  profileStatus: document.querySelector("#profile-status"),
+  profileManage: document.querySelector("#profile-manage"),
+  profileManageStatus: document.querySelector("#profile-manage-status"),
+  profileClose: document.querySelector("#profile-close"),
+  profileSkip: document.querySelector("#profile-skip"),
+  profileForget: document.querySelector("#profile-forget"),
   menuToggle: document.querySelector("#menu-toggle"),
   primaryNav: document.querySelector("#primary-nav")
 };
@@ -118,6 +71,7 @@ let activeMediaIndex = 0;
 let projectMediaItems = [];
 let videoLoadTimer = 0;
 let lastFocusedElement = null;
+let savedProfile = null;
 let youTubeApiPromise;
 
 function normalizeHeader(value) {
@@ -294,7 +248,7 @@ function parseProjectMediaColumns(rows, column) {
     const projectName = value(cells, "project");
     const category = column.category === undefined ? "" : value(cells, "category");
     const sheetTier = column.tier === undefined ? "" : titleCaseTier(value(cells, "tier"));
-    const tier = sheetTier || titleCaseTier(category) || LEGACY_DEMO_TIERS[projectName.toLowerCase()] || "Signature";
+    const tier = sheetTier || titleCaseTier(category) || "Signature";
     if (!projectName || !tier) return null;
     if (column.status !== undefined && value(cells, "status").toLowerCase() !== "show") return null;
 
@@ -377,7 +331,7 @@ function parseMediaRows(rows, column) {
       const categoryTier = titleCaseTier(category);
       project = {
         title: displayProjectName(projectName),
-        tier: sheetTier || categoryTier || LEGACY_DEMO_TIERS[key] || "Signature",
+        tier: sheetTier || categoryTier || "Signature",
         tierSource: sheetTier || categoryTier ? "sheet" : "default",
         category,
         sourceFormat: "media",
@@ -431,11 +385,7 @@ function parseMediaRows(rows, column) {
 }
 
 function displayProjectName(value) {
-  return value
-    .replace(/\b\w/g, character => character.toUpperCase())
-    .replace(/\bKsr\b/g, "KSR")
-    .replace(/\bMsr\b/g, "MSR")
-    .replace(/\bBsr\b/g, "BSR");
+  return value.replace(/\b\w/g, character => character.toUpperCase());
 }
 
 function titleCaseTier(value) {
@@ -841,7 +791,7 @@ function escapeHtml(value) {
   })[char]);
 }
 
-function showDemoNotice(message) {
+function showDataNotice(message) {
   elements.dataNotice.replaceChildren(document.createTextNode(message));
   elements.dataNotice.hidden = false;
 }
@@ -853,8 +803,8 @@ async function loadProjects({ quiet = false } = {}) {
   }
 
   if (!CONFIG.SHEET_CSV_URL || CONFIG.SHEET_CSV_URL.includes("PASTE_")) {
-    projects = demoProjects();
-    showDemoNotice("Showing sample projects. Connect the published Projects CSV in script.js to load the studio's live work.");
+    projects = [];
+    showDataNotice("The Projects CSV URL is not configured. Connect the published sheet to show projects.");
   } else {
     try {
       const response = await fetch(CONFIG.SHEET_CSV_URL, { cache: "no-store" });
@@ -863,13 +813,12 @@ async function loadProjects({ quiet = false } = {}) {
       projects = loaded;
       elements.dataNotice.hidden = true;
       if (loaded.some(project => project.sourceFormat === "media" && project.tierSource !== "sheet")) {
-        showDemoNotice("Some media-sheet projects do not have a Premium, Signature, or Essential value in the tier/category column. KSR, MSR, and BSR use demo assignments; other projects default to Signature. Add a tier column to assign tiers in the sheet.");
+        showDataNotice("Some projects do not specify Premium, Signature, or Essential in the tier/category column. They are shown as Signature; add a tier column to assign tiers explicitly.");
       }
-      if (!projects.length) showDemoNotice("No projects with Status = Show were found. Showing sample projects until the sheet is updated.");
-      if (!projects.length) projects = demoProjects();
+      if (!projects.length) showDataNotice("No projects with Status = Show were found in the published sheet.");
     } catch (error) {
-      projects = demoProjects();
-      showDemoNotice(`The projects sheet could not be loaded (${error.message}). Showing sample projects. Check the published Projects CSV URL.`);
+      if (!quiet || !projects.length) projects = [];
+      showDataNotice(`The projects sheet could not be loaded (${error.message}). Check the published Projects CSV URL.`);
     }
   }
 
@@ -882,6 +831,280 @@ function setFormStatus(form, message, state = "") {
   const status = form.querySelector(".form-status");
   status.textContent = message;
   status.dataset.state = state;
+}
+
+function readSavedProfile() {
+  try {
+    const profile = JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY) || "null");
+    if (!profile || typeof profile.name !== "string" ||
+        typeof profile.email !== "string" || typeof profile.phone !== "string" ||
+        typeof profile.visitorId !== "string" || !/^[a-f0-9]{32}$/i.test(profile.visitorId) ||
+        profile.savedToSheet !== true) return null;
+    return {
+      name: profile.name.trim(),
+      email: profile.email.trim(),
+      phone: profile.phone.trim(),
+      visitorId: profile.visitorId.toLowerCase(),
+      savedToSheet: true
+    };
+  } catch (error) {
+    console.error("Saved details could not be read from this browser.", error);
+    return null;
+  }
+}
+
+function hasSavedProfileChoice() {
+  try {
+    const choice = localStorage.getItem(PROFILE_CHOICE_KEY);
+    return choice === "skipped" || choice === "forgotten" ||
+      (choice === "saved" && Boolean(savedProfile));
+  } catch (error) {
+    console.error("The saved-details choice could not be read from this browser.", error);
+    return false;
+  }
+}
+
+function getStoredVisitorId() {
+  try {
+    const visitorId = localStorage.getItem(PROFILE_VISITOR_ID_KEY) || "";
+    return /^[a-f0-9]{32}$/i.test(visitorId) ? visitorId.toLowerCase() : "";
+  } catch (error) {
+    console.error("The visitor ID could not be read from this browser.", error);
+    return "";
+  }
+}
+
+function createVisitorId() {
+  if (!window.crypto || typeof window.crypto.getRandomValues !== "function") {
+    throw new Error("This browser cannot create a secure visitor ID.");
+  }
+  const bytes = new Uint8Array(16);
+  window.crypto.getRandomValues(bytes);
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function isAppsScriptConfigured() {
+  return Boolean(CONFIG.APPS_SCRIPT_URL && !CONFIG.APPS_SCRIPT_URL.includes("PASTE_"));
+}
+
+async function postProfileEvent(eventType, values) {
+  if (!isAppsScriptConfigured()) {
+    throw new Error("The private spreadsheet connection is not configured yet.");
+  }
+  const payload = new URLSearchParams({ eventType, ...values });
+  const response = await fetch(CONFIG.APPS_SCRIPT_URL, {
+    method: "POST",
+    mode: "cors",
+    redirect: "follow",
+    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+    body: payload.toString()
+  });
+  if (!response.ok) throw new Error(`The profile service returned HTTP ${response.status}.`);
+  const result = await response.json();
+  if (!result.success) throw new Error(result.error || "The profile could not be saved.");
+  return result;
+}
+
+function storeProfileChoice(choice) {
+  try {
+    localStorage.setItem(PROFILE_CHOICE_KEY, choice);
+    return true;
+  } catch (error) {
+    console.error("The saved-details choice could not be stored in this browser.", error);
+    return false;
+  }
+}
+
+function setProfileStatus(message, state = "") {
+  elements.profileStatus.textContent = message;
+  elements.profileStatus.dataset.state = state;
+}
+
+function setProfileManageStatus(message) {
+  elements.profileManageStatus.textContent = message;
+  elements.profileManageStatus.hidden = !message;
+}
+
+function updateSavedProfileControls() {
+  elements.profileManage.textContent = savedProfile
+    ? "Edit or forget saved details on this device"
+    : "Save my details to the private sheet";
+  elements.profileForget.hidden = !savedProfile && !getStoredVisitorId();
+  elements.profileSkip.textContent = savedProfile ? "Cancel" : "Continue without saving";
+}
+
+function fillContactFormFromProfile() {
+  if (!savedProfile) return;
+  for (const [name, value] of Object.entries(savedProfile)) {
+    const field = elements.contactForm.elements.namedItem(name);
+    if (field && !field.value.trim()) field.value = value;
+  }
+}
+
+function openSavedProfileDialog() {
+  elements.profileName.value = savedProfile ? savedProfile.name : "";
+  elements.profileEmail.value = savedProfile ? savedProfile.email : "";
+  elements.profilePhone.value = savedProfile ? savedProfile.phone : "";
+  elements.profileForm.elements.namedItem("formStartedAt").value = String(Date.now());
+  setProfileStatus("");
+  updateSavedProfileControls();
+  elements.profileDialog.showModal();
+}
+
+async function dismissSavedProfileDialog() {
+  if (!savedProfile) {
+    const visitorId = getStoredVisitorId();
+    if (visitorId) {
+      try {
+        await postProfileEvent("forgetprofile", { visitorId });
+        localStorage.removeItem(PROFILE_VISITOR_ID_KEY);
+      } catch (error) {
+        console.error("An incomplete profile save could not be cleared from the private sheet.", error);
+        setProfileManageStatus("A profile save could not be confirmed or cleared. Reopen this dialog and choose Forget saved details.");
+      }
+    }
+    if (!storeProfileChoice("skipped")) {
+      setProfileManageStatus("This browser could not remember your choice; this optional prompt may appear again.");
+    }
+  }
+  if (elements.profileDialog.open) elements.profileDialog.close();
+}
+
+async function saveProfileLocally(event) {
+  event.preventDefault();
+  if (!elements.profileForm.reportValidity()) return;
+  const formStartedAt = Number(elements.profileForm.elements.namedItem("formStartedAt").value);
+  if (elements.profileForm.elements.namedItem("website").value ||
+      !Number.isFinite(formStartedAt) || Date.now() - formStartedAt < 3000) {
+    setProfileStatus("Please wait a moment before saving your details.", "error");
+    return;
+  }
+
+  const profile = {
+    name: elements.profileName.value.trim(),
+    email: elements.profileEmail.value.trim(),
+    phone: elements.profilePhone.value.trim()
+  };
+  if (profile.name.length < 2 || profile.name.length > 100 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email) ||
+      !/^[+()\d\s.-]{7,24}$/.test(profile.phone)) {
+    setProfileStatus("Check the name, email, and phone number and try again.", "error");
+    return;
+  }
+  if (!isAppsScriptConfigured()) {
+    setProfileStatus("The private spreadsheet connection is not configured yet. Your details were not saved or sent.", "error");
+    return;
+  }
+
+  let visitorId = savedProfile ? savedProfile.visitorId : getStoredVisitorId();
+  try {
+    if (!visitorId) visitorId = createVisitorId();
+    localStorage.setItem(PROFILE_VISITOR_ID_KEY, visitorId);
+  } catch (error) {
+    console.error("A secure visitor ID could not be stored in this browser.", error);
+    setProfileStatus("These details cannot be saved because this browser could not store a secure ID.", "error");
+    return;
+  }
+
+  const saveButton = elements.profileForm.querySelector(".submit-button");
+  const saveButtonLabel = saveButton.querySelector("span");
+  const idleButtonText = saveButtonLabel.textContent;
+  saveButton.disabled = true;
+  saveButtonLabel.textContent = "Saving…";
+  setProfileStatus("Saving your details to the studio’s private sheet…");
+
+  try {
+    await postProfileEvent("profile", {
+      ...profile,
+      visitorId,
+      formStartedAt: String(formStartedAt),
+      website: elements.profileForm.elements.namedItem("website").value
+    });
+    const storedProfile = { ...profile, visitorId, savedToSheet: true };
+    try {
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(storedProfile));
+    } catch (error) {
+      try {
+        await postProfileEvent("forgetprofile", { visitorId });
+        localStorage.removeItem(PROFILE_VISITOR_ID_KEY);
+      } catch (cleanupError) {
+        console.error("A profile that could not be retained in this browser could not be removed from the sheet.", cleanupError);
+      }
+      throw new Error("The sheet saved your details, but this browser could not remember them. Please try again.");
+    }
+
+    savedProfile = storedProfile;
+    storeProfileChoice("saved");
+    fillContactFormFromProfile();
+    updateSavedProfileControls();
+    setProfileManageStatus("Your details were saved to the studio’s private sheet.");
+    elements.profileDialog.close();
+  } catch (error) {
+    console.error("The visitor profile could not be confirmed in the private sheet.", error);
+    setProfileStatus(`${error.message} Your details were not confirmed as saved; please try again.`, "error");
+  } finally {
+    saveButton.disabled = false;
+    saveButtonLabel.textContent = idleButtonText;
+  }
+}
+
+async function forgetSavedProfile() {
+  const previousProfile = savedProfile;
+  const visitorId = previousProfile ? previousProfile.visitorId : getStoredVisitorId();
+
+  if (visitorId) {
+    setProfileStatus("Removing your profile from the studio’s private sheet…");
+    try {
+      await postProfileEvent("forgetprofile", { visitorId });
+    } catch (error) {
+      console.error("Saved details could not be removed from the private sheet.", error);
+      setProfileStatus(`${error.message} Your saved details were not removed; please try again.`, "error");
+      return;
+    }
+  }
+
+  try {
+    localStorage.removeItem(PROFILE_STORAGE_KEY);
+    localStorage.removeItem(PROFILE_VISITOR_ID_KEY);
+  } catch (error) {
+    console.error("Saved details could not be removed from this browser.", error);
+    setProfileStatus("The sheet was updated, but this browser could not clear its saved copy.", "error");
+    return;
+  }
+
+  storeProfileChoice("forgotten");
+  savedProfile = null;
+  if (previousProfile) {
+    for (const [name, value] of Object.entries(previousProfile)) {
+      const field = elements.contactForm.elements.namedItem(name);
+      if (field && field.value.trim() === value) field.value = "";
+    }
+  }
+  elements.profileForm.reset();
+  updateSavedProfileControls();
+  setProfileManageStatus("Saved details were removed from this browser and the private sheet. Previously submitted enquiries are separate.");
+  elements.profileDialog.close();
+}
+
+function initSavedProfileDialog() {
+  savedProfile = readSavedProfile();
+  if (savedProfile) fillContactFormFromProfile();
+  updateSavedProfileControls();
+
+  elements.profileManage.addEventListener("click", openSavedProfileDialog);
+  elements.profileForm.addEventListener("submit", saveProfileLocally);
+  elements.profileSkip.addEventListener("click", dismissSavedProfileDialog);
+  elements.profileClose.addEventListener("click", dismissSavedProfileDialog);
+  elements.profileForget.addEventListener("click", forgetSavedProfile);
+  elements.profileDialog.addEventListener("cancel", event => {
+    event.preventDefault();
+    dismissSavedProfileDialog();
+  });
+  elements.profileDialog.addEventListener("click", event => {
+    if (event.target === elements.profileDialog) dismissSavedProfileDialog();
+  });
+
+  if (!savedProfile && !hasSavedProfileChoice()) openSavedProfileDialog();
 }
 
 async function submitEnquiry(event) {
@@ -933,7 +1156,7 @@ async function submitEnquiry(event) {
 }
 
 async function recordAnonymousPageView() {
-  const isConfigured = CONFIG.APPS_SCRIPT_URL && !CONFIG.APPS_SCRIPT_URL.includes("PASTE_");
+  const isConfigured = isAppsScriptConfigured();
   document.querySelector("#analytics-privacy-note").hidden = !isConfigured;
   if (!isConfigured) return;
 
@@ -999,6 +1222,7 @@ function initDialogs() {
 renderContactSettings();
 initNavigation();
 initDialogs();
+initSavedProfileDialog();
 elements.contactForm.addEventListener("submit", submitEnquiry);
 elements.contactForm.querySelector('[name="formStartedAt"]').value = String(Date.now());
 recordAnonymousPageView();

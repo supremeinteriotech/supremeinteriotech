@@ -167,6 +167,8 @@
           <a id="contact-map" href="#" target="_blank" rel="noopener noreferrer" hidden>Find us on the map <span aria-hidden="true">↗</span></a>
         </div>
         <a class="whatsapp-link" id="whatsapp-link" href="#" target="_blank" rel="noopener noreferrer" hidden><span class="whatsapp-icon" aria-hidden="true">◉</span> Chat on WhatsApp <span aria-hidden="true">↗</span></a>
+        <button class="profile-manage-button" id="profile-manage" type="button">Save my details on this device</button>
+        <p class="profile-manage-status" id="profile-manage-status" role="status" aria-live="polite" hidden></p>
       </div>
       <form class="contact-form" id="contact-form">
         <div class="form-row">
@@ -216,8 +218,33 @@
         </div>
       </div>
     </div>
-    <div class="footer-bottom"><span>Copyright © <span id="current-year"></span> All rights reserved | This WEB is developed by <a href="https://ali-akbar-k.github.io/PORTFOLIO/" target="_blank" rel="noopener noreferrer"><strong>Ali-Akbar-K</strong></a></span><span class="footer-privacy-note" id="analytics-privacy-note" hidden>POC analytics records page path and visit time only.</span><a href="#home">Back to top ↑</a></div>
+    <div class="footer-bottom"><span>Copyright © <span id="current-year"></span> All rights reserved | This WEB is developed by <a href="https://ali-akbar-k.github.io/PORTFOLIO/" target="_blank" rel="noopener noreferrer"><strong>Ali-Akbar-K</strong></a></span><span class="footer-privacy-note" id="analytics-privacy-note" hidden>Page views are anonymous; saved contact profiles are kept separately.</span><a href="#home">Back to top ↑</a></div>
   </footer>
+
+  <dialog class="profile-dialog" id="profile-dialog" aria-labelledby="profile-title">
+    <form class="contact-form profile-dialog-form" id="profile-form">
+      <div class="modal-shell">
+        <button class="modal-close" id="profile-close" type="button" aria-label="Close saved details">×</button>
+        <div class="modal-copy">
+          <p class="modal-tier">OPTIONAL · PRIVATE STUDIO SHEET</p>
+          <h2 id="profile-title">Save your details for next time</h2>
+          <p class="modal-description">Only if you choose Save, your name, email, and phone are sent to the studio’s private Visitor Profiles sheet for follow-up. This does not submit an enquiry. If you skip, only anonymous page paths and visit times are logged when tracking is enabled. You can forget your saved profile from this browser; previously submitted enquiries remain separate.</p>
+          <label>Your name<input id="profile-name" name="name" autocomplete="name" required minlength="2" maxlength="100" placeholder="Name"></label>
+          <label>Email address<input id="profile-email" name="email" type="email" autocomplete="email" required maxlength="200" placeholder="you@example.com"></label>
+          <label>Phone<input id="profile-phone" name="phone" type="tel" autocomplete="tel" required minlength="7" maxlength="24" pattern="[+\(\)0-9 .\x2d]{7,24}" placeholder="+91"></label>
+          <label class="honeypot" aria-hidden="true">Leave this field empty<input name="website" tabindex="-1" autocomplete="off"></label>
+          <input type="hidden" name="formStartedAt" id="profile-form-started-at">
+          <p class="form-status" id="profile-status" role="status" aria-live="polite"></p>
+          <div class="profile-dialog-actions">
+            <button class="button button-dark submit-button" type="submit"><span>Save to private sheet</span><span aria-hidden="true">↗</span></button>
+            <button class="profile-secondary-button" id="profile-skip" type="button">Continue without saving</button>
+            <button class="profile-secondary-button" id="profile-forget" type="button" hidden>Forget saved details</button>
+          </div>
+          <p class="form-privacy">Forgetting removes this profile from the browser and the private Visitor Profiles sheet. Enquiries you already submitted are separate.</p>
+        </div>
+      </div>
+    </form>
+  </dialog>
 
   <dialog class="project-modal" id="project-modal" aria-labelledby="modal-title">
     <div class="modal-shell">

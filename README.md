@@ -6,7 +6,7 @@ A responsive interior-design studio website with a Google Sheets portfolio, proj
 
 - `index.html`, `style.css`, `script.js`: deploy these three files together to GitHub Pages.
 - `Code.gs`: Google Apps Script backend, run as a bound script from the portfolio spreadsheet.
-- `Projects-template.csv`: three example project rows for reference/import.
+- `Projects-template.csv`: optional CSV template for project data.
 
 The website can read a one-row-per-project sheet with separate `image`, `video`, and `reels` columns, the older one-row-per-project schema, or the existing one-row-per-media schema. For the easiest maintenance, use one row per project and put multiple comma-separated links in each media cell.
 
@@ -17,8 +17,9 @@ The website can read a one-row-per-project sheet with separate `image`, `video`,
 3. Replace the editor contents with the full contents of `Code.gs`, then save.
 4. In the function selector choose `setupSheets` and click **Run**. Approve the requested spreadsheet permissions.
 5. Return to the spreadsheet. The setup creates these tabs:
-   - **Projects**: seeded with three demo rows if the tab was empty.
+   - **Projects**: headers only; add approved project data from the sheet.
    - **Enquiries**: website leads are saved here before emails are sent.
+   - **Visitor Profiles**: visitors who explicitly choose Save have their name, phone, and email recorded here for follow-up.
    - **Page Views**: anonymous page path and server timestamp only.
    - **Clients**: optional mailing list.
    - **Send Log**: results for each project-update email.
@@ -72,7 +73,7 @@ The site also supports the currently connected sheet columns `category, project,
 | Residential | Signature | msr area project | post | Living room details | `https://www.instagram.com/p/POST_ID/` |  | 2026-11-14 |
 | Residential | Signature | msr area project | image | Bedroom photo | `https://example.com/photo.jpg` |  | 2026-11-14 |
 
-`category` describes the kind of project (such as Residential); `tier` selects the Premium, Signature, or Essential filter; `type` classifies each media item. Use `video` for YouTube, `reel` for an Instagram Reel, `post` for an Instagram post, and `image` for a direct image URL (or an Instagram URL, which is classified from its link). The project card summarizes which media types it contains, and the viewer labels each item. The `title` column is currently informational. To add a new post or Reel later, append a row with the same project name and tier, set its type and public link, then publish the updated sheet; the portfolio refreshes within about five minutes. A `category` value matching one of the tier names is also accepted when there is no tier value. The site's current KSR/MSR/BSR assignments are demo defaults only; explicit values in the sheet take precedence. Projects without an assigned tier default to Signature.
+`category` describes the kind of project (such as Residential); `tier` selects the Premium, Signature, or Essential filter; `type` classifies each media item. Use `video` for YouTube, `reel` for an Instagram Reel, `post` for an Instagram post, and `image` for a direct image URL (or an Instagram URL, which is classified from its link). The project card summarizes which media types it contains, and the viewer labels each item. The `title` column is currently informational. To add a new post or Reel later, append a row with the same project name and tier, set its type and public link, then publish the updated sheet; the portfolio refreshes within about five minutes. A `category` value matching one of the tier names is also accepted when there is no tier value. Projects without a tier or matching category default to Signature.
 
 Rows with the same project value are grouped into a single card, and the project's media is placed together in the viewer. YouTube links become video slides; public Instagram posts and Reels become Instagram embed slides labeled by type; direct image links become lightbox photo slides. Repeated links of the same kind are deduplicated.
 
@@ -99,11 +100,13 @@ At the top of `script.js`, set the `CONFIG` values:
 
 Do not publish private contact details or sample testimonials without the client's approval. The page currently contains no fabricated client testimonials.
 
-The homepage does not show a lead-capture popup. When the Apps Script endpoint is configured, each portfolio-page load sends only its path; Apps Script adds the timestamp and saves those two fields to **Page Views**. The request body contains no name, phone number, email, referrer, or browser details, and the spreadsheet does not store IP addresses. Google may process standard connection metadata to deliver the request. The regular contact form remains available for visitors who choose to submit an enquiry.
+On the first visit, an optional profile dialog lets visitors save their name, email, and phone to the private **Visitor Profiles** tab, or continue without saving. The choice is remembered so it does not prompt again; visitors can edit or forget the profile from the contact section. Saving a profile does not submit an enquiry or send an email. Forgetting removes that profile from the browser and **Visitor Profiles**; enquiries already submitted remain in **Enquiries**.
+
+When the Apps Script endpoint is configured, each portfolio-page load sends only its path; Apps Script adds the timestamp and saves those two fields to **Page Views**. These anonymous page-view rows are not linked to saved profiles. The request contains no contact details, referrer, or browser details, and the spreadsheet does not store IP addresses. Google may process standard connection metadata to deliver the request.
 
 ## 4. Deploy the Apps Script enquiry and page-view backend
 
-1. Use a private Google spreadsheet for this backend. Do not publish the **Enquiries** or **Page Views** tabs; only publish the public **Projects** tab.
+1. Use a private Google spreadsheet for this backend. Do not publish the **Enquiries**, **Visitor Profiles**, or **Page Views** tabs; only publish the public **Projects** tab. Published CSV links are public and read-only; they cannot receive writes.
 2. In that private spreadsheet choose **Extensions → Apps Script**.
 3. In `Code.gs`, replace `REPLACE_WITH_STUDIO_EMAIL` in `APP_CONFIG.DESIGNER_EMAIL` with the designer's email address if email notifications are wanted.
 4. Save. Run `setupSheets` once if you have not already, then complete any permission prompts.
@@ -112,7 +115,7 @@ The homepage does not show a lead-capture popup. When the Apps Script endpoint i
 7. Copy the Web App URL ending in `/exec` to `CONFIG.APPS_SCRIPT_URL` in `script.js`.
 8. Redeploy a **new version** of the Web App after every later Apps Script code change. The website itself does not need redeployment for spreadsheet row updates.
 
-Page-view requests contain only an `eventType` and the page path (without query parameters or fragments); Apps Script adds the timestamp and stores those two columns. The browser uses `no-cors`, so it cannot confirm the write; verify visits in the private **Page Views** tab. The contact form separately sends visitor-submitted fields with URL-encoded `fetch()` and includes validation, a honeypot, and a minimum submission-time check. `doPost` saves an enquiry before sending email. Apps Script deployment, Google authorization, and browser network policy can affect cross-origin responses; test from the published site.
+Page-view requests contain only an `eventType` and the page path (without query parameters or fragments); Apps Script adds the timestamp and stores those two columns. The browser uses `no-cors`, so it cannot confirm the write; verify visits in the private **Page Views** tab. A visitor profile is written to **Visitor Profiles** only after the visitor chooses **Save to private sheet**; that request uses a random browser ID to update the same profile instead of adding duplicates. Forgetting the profile removes its row. The contact form separately sends visitor-submitted fields with URL-encoded `fetch()` and includes validation, a honeypot, and a minimum submission-time check. `doPost` saves an enquiry before sending email. Apps Script deployment, Google authorization, and browser network policy can affect cross-origin responses; test from the published site.
 
 Google's approximate daily-recipient quotas are around 100 for consumer Gmail and 1,500 for Workspace, but the live `getRemainingDailyQuota()` result is authoritative.
 
@@ -150,11 +153,12 @@ The script checks quota before sends, sends only as many as remaining quota allo
 
 ## Troubleshooting
 
-- **Sample projects still show:** Check `SHEET_CSV_URL`, ensure it is a published CSV for the **Projects** tab, and wait up to five minutes.
+- **Projects do not show:** Check `SHEET_CSV_URL`, ensure it is a published CSV for the **Projects** tab, and confirm the sheet has rows with `Status` = `Show`. The site no longer substitutes hardcoded demo projects when the sheet is empty or unavailable.
 - **Projects missing:** Check exact column headers, valid tier, and `Status` = `Show`; hidden rows are intentionally omitted.
 - **Instagram Reel does not play inline:** An Instagram URL can show a preview but cannot guarantee in-page playback. Add the original MP4 video file to the website and enter its relative path in the `video` column, such as `assets/project-reel.mp4`.
 - **Video not playing in modal:** Confirm the YouTube ID/link is correct and embedding is enabled in the video's YouTube settings. Browser codec support can also prevent playback; for reliable playback, add an MP4 encoded as H.264 video with AAC audio to the website and use its path in `video`.
 - **Enquiry form says it is not connected:** Set `APPS_SCRIPT_URL` to the current deployed `/exec` URL, and set the studio email in `APP_CONFIG`.
+- **Profile will not save:** Set `APPS_SCRIPT_URL` to the deployed `/exec` URL, run `setupSheets`, authorize the bound script, redeploy it, and keep **Visitor Profiles** private.
 - **No page views appear:** Confirm `APPS_SCRIPT_URL` is a deployed `/exec` URL, the current Apps Script version includes `recordPageView_`, and `setupSheets` created the private **Page Views** tab.
 - **Form request fails:** Confirm Web App access is **Anyone**, authorize Apps Script, redeploy after code changes, and test from the HTTP/HTTPS site rather than `file://`.
 - **No enquiry email:** Check the **Enquiries** tab first; saved leads are retained even when mail quota is exhausted. Check Apps Script executions and the remaining daily quota.
