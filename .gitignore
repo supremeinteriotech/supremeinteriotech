@@ -1,0 +1,10 @@
+# OS-generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local VS Code settings
+.vscode/settings.json
+
+# Keep the Apps Script backend out of Git
+Code.gs
