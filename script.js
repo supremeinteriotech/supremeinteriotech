@@ -106,10 +106,6 @@ const elements = {
   lightboxImage: document.querySelector("#lightbox-image"),
   lightboxCount: document.querySelector("#lightbox-count"),
   contactForm: document.querySelector("#contact-form"),
-  leadCaptureDialog: document.querySelector("#lead-capture-modal"),
-  leadCaptureClose: document.querySelector("#lead-capture-close"),
-  leadCaptureLater: document.querySelector("#lead-capture-later"),
-  leadCaptureForm: document.querySelector("#lead-capture-form"),
   menuToggle: document.querySelector("#menu-toggle"),
   primaryNav: document.querySelector("#primary-nav")
 };
@@ -936,6 +932,28 @@ async function submitEnquiry(event) {
   }
 }
 
+async function recordAnonymousPageView() {
+  const isConfigured = CONFIG.APPS_SCRIPT_URL && !CONFIG.APPS_SCRIPT_URL.includes("PASTE_");
+  document.querySelector("#analytics-privacy-note").hidden = !isConfigured;
+  if (!isConfigured) return;
+
+  const payload = new URLSearchParams({
+    eventType: "pageview",
+    pagePath: window.location.pathname.slice(0, 256)
+  });
+
+  try {
+    await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: payload.toString()
+    });
+  } catch (error) {
+    console.error("Anonymous page-view request could not be sent.", error);
+  }
+}
+
 function initNavigation() {
   elements.menuToggle.addEventListener("click", () => {
     const expanded = elements.menuToggle.getAttribute("aria-expanded") === "true";
@@ -978,25 +996,11 @@ function initDialogs() {
   });
 }
 
-function initLeadCaptureDialog() {
-  if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.includes("PASTE_")) return;
-
-  const closeLeadCapture = () => elements.leadCaptureDialog.close();
-  elements.leadCaptureClose.addEventListener("click", closeLeadCapture);
-  elements.leadCaptureLater.addEventListener("click", closeLeadCapture);
-  elements.leadCaptureDialog.addEventListener("click", event => {
-    if (event.target === elements.leadCaptureDialog) closeLeadCapture();
-  });
-  elements.leadCaptureDialog.showModal();
-}
-
 renderContactSettings();
 initNavigation();
 initDialogs();
-initLeadCaptureDialog();
-for (const form of [elements.contactForm, elements.leadCaptureForm]) {
-  form.addEventListener("submit", submitEnquiry);
-  form.querySelector('[name="formStartedAt"]').value = String(Date.now());
-}
+elements.contactForm.addEventListener("submit", submitEnquiry);
+elements.contactForm.querySelector('[name="formStartedAt"]').value = String(Date.now());
+recordAnonymousPageView();
 loadProjects();
 window.setInterval(() => loadProjects({ quiet: true }), CONFIG.SHEET_REFRESH_MS);

@@ -19,6 +19,7 @@ The website can read a one-row-per-project sheet with separate `image`, `video`,
 5. Return to the spreadsheet. The setup creates these tabs:
    - **Projects**: seeded with three demo rows if the tab was empty.
    - **Enquiries**: website leads are saved here before emails are sent.
+   - **Page Views**: anonymous page path and server timestamp only.
    - **Clients**: optional mailing list.
    - **Send Log**: results for each project-update email.
 
@@ -98,19 +99,20 @@ At the top of `script.js`, set the `CONFIG` values:
 
 Do not publish private contact details or sample testimonials without the client's approval. The page currently contains no fabricated client testimonials.
 
-Once the Apps Script backend is configured, the homepage opens a dismissible lead-capture form on every visit. Visitors must enter and submit their own name, phone number, and email; clicking a link alone does not collect personal data. Submissions are saved to the **Enquiries** tab.
+The homepage does not show a lead-capture popup. When the Apps Script endpoint is configured, each portfolio-page load sends only its path; Apps Script adds the timestamp and saves those two fields to **Page Views**. The request body contains no name, phone number, email, referrer, or browser details, and the spreadsheet does not store IP addresses. Google may process standard connection metadata to deliver the request. The regular contact form remains available for visitors who choose to submit an enquiry.
 
-## 4. Deploy the Apps Script enquiry backend
+## 4. Deploy the Apps Script enquiry and page-view backend
 
-1. In the same spreadsheet choose **Extensions → Apps Script**.
-2. In `Code.gs`, replace `REPLACE_WITH_STUDIO_EMAIL` in `APP_CONFIG.DESIGNER_EMAIL` with the designer's email address.
-3. Save. Run `setupSheets` once if you have not already, then complete any permission prompts.
-4. Choose **Deploy → New deployment**.
-5. Select **Web app**. Set **Execute as: Me** and **Who has access: Anyone**. Deploy and authorize.
-6. Copy the Web App URL ending in `/exec` to `CONFIG.APPS_SCRIPT_URL` in `script.js`.
-7. Redeploy a **new version** of the Web App after every later Apps Script code change. The website itself does not need redeployment for spreadsheet row updates.
+1. Use a private Google spreadsheet for this backend. Do not publish the **Enquiries** or **Page Views** tabs; only publish the public **Projects** tab.
+2. In that private spreadsheet choose **Extensions → Apps Script**.
+3. In `Code.gs`, replace `REPLACE_WITH_STUDIO_EMAIL` in `APP_CONFIG.DESIGNER_EMAIL` with the designer's email address if email notifications are wanted.
+4. Save. Run `setupSheets` once if you have not already, then complete any permission prompts.
+5. Choose **Deploy → New deployment**.
+6. Select **Web app**. Set **Execute as: Me** and **Who has access: Anyone**. Deploy and authorize. The spreadsheet stays private; the public endpoint only writes through the script.
+7. Copy the Web App URL ending in `/exec` to `CONFIG.APPS_SCRIPT_URL` in `script.js`.
+8. Redeploy a **new version** of the Web App after every later Apps Script code change. The website itself does not need redeployment for spreadsheet row updates.
 
-The form sends URL-encoded data with `fetch()` (a CORS-simple content type), includes browser and server validation, a hidden honeypot, and a minimum submission-time check. `doPost` appends the enquiry first, then sends at most one designer email and—if enabled and quota remains—one visitor auto-reply. It checks `MailApp.getRemainingDailyQuota()` before sending. If email quota is unavailable, the enquiry remains saved and the website still receives a success response. Apps Script deployment, Google account authorization, and browser network policy can affect cross-origin responses; test the deployed form from the published site.
+Page-view requests contain only an `eventType` and the page path (without query parameters or fragments); Apps Script adds the timestamp and stores those two columns. The browser uses `no-cors`, so it cannot confirm the write; verify visits in the private **Page Views** tab. The contact form separately sends visitor-submitted fields with URL-encoded `fetch()` and includes validation, a honeypot, and a minimum submission-time check. `doPost` saves an enquiry before sending email. Apps Script deployment, Google authorization, and browser network policy can affect cross-origin responses; test from the published site.
 
 Google's approximate daily-recipient quotas are around 100 for consumer Gmail and 1,500 for Workspace, but the live `getRemainingDailyQuota()` result is authoritative.
 
@@ -153,6 +155,7 @@ The script checks quota before sends, sends only as many as remaining quota allo
 - **Instagram Reel does not play inline:** An Instagram URL can show a preview but cannot guarantee in-page playback. Add the original MP4 video file to the website and enter its relative path in the `video` column, such as `assets/project-reel.mp4`.
 - **Video not playing in modal:** Confirm the YouTube ID/link is correct and embedding is enabled in the video's YouTube settings. Browser codec support can also prevent playback; for reliable playback, add an MP4 encoded as H.264 video with AAC audio to the website and use its path in `video`.
 - **Enquiry form says it is not connected:** Set `APPS_SCRIPT_URL` to the current deployed `/exec` URL, and set the studio email in `APP_CONFIG`.
+- **No page views appear:** Confirm `APPS_SCRIPT_URL` is a deployed `/exec` URL, the current Apps Script version includes `recordPageView_`, and `setupSheets` created the private **Page Views** tab.
 - **Form request fails:** Confirm Web App access is **Anyone**, authorize Apps Script, redeploy after code changes, and test from the HTTP/HTTPS site rather than `file://`.
 - **No enquiry email:** Check the **Enquiries** tab first; saved leads are retained even when mail quota is exhausted. Check Apps Script executions and the remaining daily quota.
 - **Client update emails pause:** Remaining subscribed clients are queued for the daily continuation; check **Send Log** and ensure Apps Script triggers are authorized.
