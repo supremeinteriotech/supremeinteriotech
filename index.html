@@ -219,6 +219,30 @@
     <div class="footer-bottom"><span>Copyright © <span id="current-year"></span> Supreme Interiotech & Constructions. All rights reserved.</span><span>Interiors · Architecture · Build</span><span>This website is developed by <a href="https://ali-akbar-k.github.io/PORTFOLIO/" target="_blank" rel="noopener noreferrer"><strong>Ali-Akbar-K</strong></a></span><a href="#home">Back to top ↑</a></div>
   </footer>
 
+  <dialog class="lead-capture-modal" id="lead-capture-modal" aria-labelledby="lead-capture-title">
+    <div class="modal-shell">
+      <button class="modal-close" id="lead-capture-close" type="button" aria-label="Close contact request">×</button>
+      <div class="modal-copy">
+        <p class="modal-tier">LET’S TALK</p>
+        <h2 id="lead-capture-title">Would you like us to contact you?</h2>
+        <p class="modal-description">Share your details and the studio can follow up about your project.</p>
+        <form class="contact-form lead-capture-form" id="lead-capture-form">
+          <label>Your name<input name="name" autocomplete="name" required minlength="2" maxlength="100" placeholder="Name"></label>
+          <label>Phone<input name="phone" type="tel" autocomplete="tel" required minlength="7" maxlength="24" placeholder="+91"></label>
+          <label>Email address<input name="email" type="email" autocomplete="email" required maxlength="200" placeholder="you@example.com"></label>
+          <input type="hidden" name="projectInterest" value="Website visit follow-up">
+          <input type="hidden" name="message" value="Visitor requested a follow-up after visiting the website.">
+          <label class="honeypot" aria-hidden="true">Leave this field empty<input name="website" tabindex="-1" autocomplete="off"></label>
+          <input type="hidden" name="formStartedAt" id="lead-form-started-at">
+          <button class="button button-dark submit-button" type="submit"><span>Request a call back</span><span aria-hidden="true">↗</span></button>
+          <button class="lead-capture-later" id="lead-capture-later" type="button">Maybe later</button>
+          <p class="form-status" role="status" aria-live="polite"></p>
+          <p class="form-privacy">By submitting, you agree we may use your details to contact you about your enquiry.</p>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
   <dialog class="project-modal" id="project-modal" aria-labelledby="modal-title">
     <div class="modal-shell">
       <button class="modal-close" id="modal-close" type="button" aria-label="Close project details">×</button>

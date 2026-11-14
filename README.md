@@ -98,6 +98,8 @@ At the top of `script.js`, set the `CONFIG` values:
 
 Do not publish private contact details or sample testimonials without the client's approval. The page currently contains no fabricated client testimonials.
 
+Once the Apps Script backend is configured, the homepage opens a dismissible lead-capture form on every visit. Visitors must enter and submit their own name, phone number, and email; clicking a link alone does not collect personal data. Submissions are saved to the **Enquiries** tab.
+
 ## 4. Deploy the Apps Script enquiry backend
 
 1. In the same spreadsheet choose **Extensions → Apps Script**.

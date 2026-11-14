@@ -106,7 +106,10 @@ const elements = {
   lightboxImage: document.querySelector("#lightbox-image"),
   lightboxCount: document.querySelector("#lightbox-count"),
   contactForm: document.querySelector("#contact-form"),
-  formStatus: document.querySelector("#form-status"),
+  leadCaptureDialog: document.querySelector("#lead-capture-modal"),
+  leadCaptureClose: document.querySelector("#lead-capture-close"),
+  leadCaptureLater: document.querySelector("#lead-capture-later"),
+  leadCaptureForm: document.querySelector("#lead-capture-form"),
   menuToggle: document.querySelector("#menu-toggle"),
   primaryNav: document.querySelector("#primary-nav")
 };
@@ -879,31 +882,34 @@ async function loadProjects({ quiet = false } = {}) {
   renderProjects();
 }
 
-function setFormStatus(message, state = "") {
-  elements.formStatus.textContent = message;
-  elements.formStatus.dataset.state = state;
+function setFormStatus(form, message, state = "") {
+  const status = form.querySelector(".form-status");
+  status.textContent = message;
+  status.dataset.state = state;
 }
 
 async function submitEnquiry(event) {
   event.preventDefault();
-  const form = elements.contactForm;
+  const form = event.currentTarget;
   const data = new FormData(form);
   const formStartedAt = Number(data.get("formStartedAt"));
   if (data.get("website") || !Number.isFinite(formStartedAt) || Date.now() - formStartedAt < 3000) {
-    setFormStatus("Please wait a moment and try submitting again.", "error");
+    setFormStatus(form, "Please wait a moment and try submitting again.", "error");
     return;
   }
   if (!form.reportValidity()) return;
 
   if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.includes("PASTE_")) {
-    setFormStatus("The enquiry form is not connected yet. Please use the studio's phone or email once those contact details are added.", "error");
+    setFormStatus(form, "The enquiry form is not connected yet. Please contact the studio directly.", "error");
     return;
   }
 
   const button = form.querySelector(".submit-button");
+  const buttonLabel = button.querySelector("span");
+  const idleButtonText = buttonLabel.textContent;
   button.disabled = true;
-  button.querySelector("span").textContent = "Sending…";
-  setFormStatus("");
+  buttonLabel.textContent = "Sending…";
+  setFormStatus(form, "");
   const payload = new URLSearchParams();
   for (const [key, value] of data.entries()) payload.set(key, String(value));
   payload.set("autoReply", String(CONFIG.AUTO_REPLY));
@@ -920,13 +926,13 @@ async function submitEnquiry(event) {
     const result = await response.json();
     if (!result.success) throw new Error(result.error || "The enquiry could not be saved.");
     form.reset();
-    document.querySelector("#form-started-at").value = String(Date.now());
-    setFormStatus("Thank you—your enquiry has been received.");
+    form.querySelector('[name="formStartedAt"]').value = String(Date.now());
+    setFormStatus(form, "Thank you—your enquiry has been received.");
   } catch (error) {
-    setFormStatus(`${error.message} Check your connection or contact the studio directly.`, "error");
+    setFormStatus(form, `${error.message} Check your connection or contact the studio directly.`, "error");
   } finally {
     button.disabled = false;
-    button.querySelector("span").textContent = "Send enquiry";
+    buttonLabel.textContent = idleButtonText;
   }
 }
 
@@ -972,10 +978,25 @@ function initDialogs() {
   });
 }
 
+function initLeadCaptureDialog() {
+  if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.includes("PASTE_")) return;
+
+  const closeLeadCapture = () => elements.leadCaptureDialog.close();
+  elements.leadCaptureClose.addEventListener("click", closeLeadCapture);
+  elements.leadCaptureLater.addEventListener("click", closeLeadCapture);
+  elements.leadCaptureDialog.addEventListener("click", event => {
+    if (event.target === elements.leadCaptureDialog) closeLeadCapture();
+  });
+  elements.leadCaptureDialog.showModal();
+}
+
 renderContactSettings();
 initNavigation();
 initDialogs();
-elements.contactForm.addEventListener("submit", submitEnquiry);
-document.querySelector("#form-started-at").value = String(Date.now());
+initLeadCaptureDialog();
+for (const form of [elements.contactForm, elements.leadCaptureForm]) {
+  form.addEventListener("submit", submitEnquiry);
+  form.querySelector('[name="formStartedAt"]').value = String(Date.now());
+}
 loadProjects();
 window.setInterval(() => loadProjects({ quiet: true }), CONFIG.SHEET_REFRESH_MS);
